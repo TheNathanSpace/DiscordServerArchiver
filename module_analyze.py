@@ -55,7 +55,8 @@ class ModuleAnalyze(commands.Cog):
     def create_database(self, guild_id):
         connection = sqlite3.connect(f'database_{guild_id}.db')
         cursor = connection.cursor()
-        cursor.execute('CREATE TABLE IF NOT EXISTS messages(message_id integer PRIMARY KEY, channel_id integer, author_id integer, message_timestamp float, attachment_url_list text, message_text text, reaction_list text);')
+        cursor.execute(
+            'CREATE TABLE IF NOT EXISTS messages(message_id integer PRIMARY KEY, channel_id integer, author_id integer, message_timestamp float, attachment_url_list text, message_text text, reaction_list text);')
         connection.commit()
 
     @commands.command()
@@ -82,7 +83,9 @@ class ModuleAnalyze(commands.Cog):
 
         for channel_id in text_channel_dict:
             if text_channel_dict[channel_id] is not None:
-                latest = cursor.execute('SELECT message_id FROM messages WHERE channel_id = ? ORDER BY message_timestamp DESC;', (channel_id,)).fetchone()
+                latest = cursor.execute(
+                    'SELECT message_id FROM messages WHERE channel_id = ? ORDER BY message_timestamp DESC;',
+                    (channel_id,)).fetchone()
                 text_channel_dict[channel_id] = latest[0]
 
         text_channel: TextChannel
@@ -103,9 +106,9 @@ class ModuleAnalyze(commands.Cog):
                 after = latest_message.created_at
                 print("Getting all messages after " + after.date().strftime("%B %d, %G"))
             try:
-                async for message in text_channel.history(limit = None, oldest_first = True, after = after):
+                async for message in text_channel.history(limit=None, oldest_first=True, after=after):
                     message_number += 1
-                    print(f"On message #{message_number}", end = "\r")
+                    print(f"On message #{message_number}", end="\r")
                     saved_message = SavedMessage(message)
                     while True:
                         try:
@@ -115,13 +118,18 @@ class ModuleAnalyze(commands.Cog):
                             print(f"Error getting reactions; retrying: {e}")
 
                     to_insert = (
-                        saved_message.message_id, saved_message.channel_id, saved_message.author_id, saved_message.message_timestamp, json.dumps(saved_message.attachment_url_list), saved_message.message_text, json.dumps(saved_message.reaction_dict)
+                        saved_message.message_id, saved_message.channel_id, saved_message.author_id,
+                        saved_message.message_timestamp, json.dumps(saved_message.attachment_url_list),
+                        saved_message.message_text, json.dumps(saved_message.reaction_dict)
                     )
-                    cursor.execute('INSERT INTO messages(message_id, channel_id, author_id, message_timestamp, attachment_url_list, message_text, reaction_list) VALUES(?,?,?,?,?,?,?) ON CONFLICT(message_id) DO NOTHING;', to_insert)
+                    cursor.execute(
+                        'INSERT INTO messages(message_id, channel_id, author_id, message_timestamp, attachment_url_list, message_text, reaction_list) VALUES(?,?,?,?,?,?,?) ON CONFLICT(message_id) DO NOTHING;',
+                        to_insert)
 
                     connection.commit()
             except:
-                print(f"Error getting messages in channel {text_channel.name}. The bot probably doesn't have access to it.")
+                print(
+                    f"Error getting messages in channel {text_channel.name}. The bot probably doesn't have access to it.")
 
         print(f"Finished scraping messages from {context.guild.name}!")
         await sent.delete()
@@ -131,7 +139,7 @@ class ModuleAnalyze(commands.Cog):
     async def count_reactions(self, context: Context):
         print(f"Counting reactions...")
         await context.message.delete()
-        sent = context.send("Counting reactions!")
+        sent: Message = await context.send("Counting reactions!")
 
         self.create_database(context.guild.id)
         connection = sqlite3.connect(f'database_{context.guild.id}.db')
@@ -163,9 +171,11 @@ class ModuleAnalyze(commands.Cog):
             except:
                 username = "Unknown user"
 
-            new_dict[f"{username} ({user})"] = dict(sorted(user_reactions[user].items(), key = lambda item: item[1], reverse = True))
+            new_dict[f"{username} ({user})"] = dict(
+                sorted(user_reactions[user].items(), key=lambda item: item[1], reverse=True))
 
-        Path(f"reactions_{datetime.now().timestamp()}.json").write_text(json.dumps(new_dict, indent = 4, ensure_ascii = False), encoding = "utf8")
+        Path(f"reactions_{datetime.now().timestamp()}.json").write_text(
+            json.dumps(new_dict, indent=4, ensure_ascii=False), encoding="utf8")
         print(f"Finished counting reactions!")
         await sent.delete()
         await context.send("Finished counting reactions!")

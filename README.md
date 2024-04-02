@@ -2,13 +2,43 @@
 
 This is a Discord bot that archives entire servers, storing every message in a SQLite database for easy querying.
 
-## Usage
+## Installation
 
-You'll need to define your secret key in the variable `key` in the module `secrets`. Then, run `bot.py`, and that's
-pretty much it.
+1. Create a Discord bot in the Developer portal: https://discord.com/developers/applications.
+
+2. Add the bot to your server using the generated OAUTH2 URL. Since I'm hosting it myself and using it on my server I'd
+   just give it Administrator permissions. Otherwise, my best guess is that it needs to view and manage messages.
+
+3. Install Python: https://www.python.org/downloads/
+
+4. Clone the repo:
+
+```bash
+git clone https://github.com/TheNathanSpace/DiscordServerArchiver
+cd DiscordServerArchiver
+```
+
+5. Install the Python dependencies:
+
+```bash
+pip install requirements.txt
+```
+
+6. Define your bot's secret key in the variable `key` in the module `secrets`:
+
+```python
+key = "asdfasdgraha4535h5h3h5.25yhbas.5h23qaz6uaq35yraq3y35aq"
+```
+
+7. Run the bot:
+
+```bash
+python bot.py
+```
+
+## Commands
 
 `!update_archive` archives every message in the server, storing them in an SQLite database.
 
-`!count_reactions` queries the local database, counts how many times each user has used each reaction, and saves the results as a `.json` file.
-
-Bot URL: https://discord.com/api/oauth2/authorize?client_id=1016161382653247569&permissions=65536&scope=bot
+`!count_reactions` queries the local database, counts how many times each user has used each reaction, and saves the
+results as a `.json` file.
