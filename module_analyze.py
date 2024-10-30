@@ -102,6 +102,7 @@ class ModuleAnalyze(commands.Cog):
             after = None
             if text_channel_dict[text_channel_id] is not None:
                 message_id = text_channel_dict[text_channel_id]
+                print(f"Message ID: {message_id}")
                 latest_message: Message = await text_channel.fetch_message(message_id)
                 after = latest_message.created_at
                 print("Getting all messages after " + after.date().strftime("%B %d, %G"))
