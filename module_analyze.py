@@ -83,10 +83,10 @@ class CogArchive(commands.Cog):
 
             for channel_id in text_channel_dict:
                 if text_channel_dict[channel_id] is not None:
-                    latest = cursor.execute(
+                    latest_message = cursor.execute(
                         'SELECT message_id FROM messages WHERE channel_id = ? ORDER BY message_timestamp DESC;',
                         (channel_id,)).fetchone()
-                    text_channel_dict[channel_id] = latest[0]
+                    text_channel_dict[channel_id] = latest_message[0]
 
             text_channel: TextChannel
             for text_channel_id in text_channel_dict:
