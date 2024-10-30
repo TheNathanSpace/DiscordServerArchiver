@@ -107,10 +107,9 @@ class CogArchive(commands.Cog):
                         latest_message: Message = await text_channel.fetch_message(message_id)
                         after = latest_message.created_at
                         logging.info("Getting all messages after " + after.date().strftime("%B %d, %G"))
-                    except Exception as e:
+                    except:
                         logging.info(
                             f"Error getting latest message in channel [{text_channel.name}]. The bot probably doesn't have access to it.")
-                        latest = await latest.reply(f"Error getting latest message in channel [{text_channel.name}]. The bot probably doesn't have access to it.")
                 try:
                     async for message in text_channel.history(limit=None, oldest_first=True, after=after):
                         message_number += 1
@@ -181,7 +180,8 @@ class CogArchive(commands.Cog):
                 new_dict[f"{username} ({user})"] = dict(
                     sorted(user_reactions[user].items(), key=lambda item: item[1], reverse=True))
 
-            Path(f"reactions_{datetime.now().timestamp()}.json").write_text(
+            file = Path(f"reactions_{datetime.now().timestamp()}.json")
+            file.write_text(
                 json.dumps(new_dict, indent=4, ensure_ascii=False), encoding="utf8")
             logging.info(f"Finished counting reactions for [{context.guild.name}]")
-            await initial.reply("Finished counting reactions!")
+            await initial.reply("Finished counting reactions!", file=f"{file.as_posix()}")
