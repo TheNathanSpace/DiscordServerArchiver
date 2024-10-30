@@ -61,7 +61,7 @@ class ModuleAnalyze(commands.Cog):
 
     @commands.command()
     async def archive(self, context: Context):
-        print(f"Started archiving messages from {context.guild.name}...")
+        print(f"Started archiving messages from '{context.guild.name}'...")
         initial = await context.message.reply("Archiving server!")
         with context.typing():
             guild: Guild = context.guild
@@ -91,10 +91,10 @@ class ModuleAnalyze(commands.Cog):
             for text_channel_id in text_channel_dict:
                 text_channel = guild.get_channel(text_channel_id) or guild.get_thread(text_channel_id)
                 if text_channel is None:
-                    print(f"Error: Channel {text_channel_id} is null")
+                    print(f"Error: Channel '{text_channel_id}' is null")
                     continue
 
-                print(f"On channel: {text_channel.name}")
+                print(f"On channel: '{text_channel.name}'")
 
                 message_number = 0
 
@@ -103,12 +103,13 @@ class ModuleAnalyze(commands.Cog):
                     try:
                         latest_message: Message = await text_channel.fetch_message(message_id)
                         message_id = text_channel_dict[text_channel_id]
-                        print(f"Message ID: {message_id}")
                         after = latest_message.created_at
                         print("Getting all messages after " + after.date().strftime("%B %d, %G"))
-                    except:
+                    except Exception as e:
                         print(
-                            f"Error getting latest message in channel {text_channel.name}. The bot probably doesn't have access to it.")
+                            f"Error getting latest message in channel '{text_channel.name}'. The bot probably doesn't have access to it.")
+                        print(f"Tried to get message ID '{message_id}'")
+                        print(e)
                 try:
                     async for message in text_channel.history(limit=None, oldest_first=True, after=after):
                         message_number += 1
@@ -133,14 +134,14 @@ class ModuleAnalyze(commands.Cog):
                         connection.commit()
                 except:
                     print(
-                        f"Error getting messages in channel {text_channel.name}. The bot probably doesn't have access to it.")
+                        f"Error getting messages in channel '{text_channel.name}'. The bot probably doesn't have access to it.")
 
-            print(f"Finished scraping messages from {context.guild.name}!")
+            print(f"Finished scraping messages from '{context.guild.name}'!")
             await initial.reply("Finished archiving server!")
 
     @commands.command()
     async def count_reactions(self, context: Context):
-        print(f"Counting reactions...")
+        print(f"Started counting reactions for '{context.guild.name}'...")
         initial = await context.message.reply("Counting reactions!")
         with context.typing():
             self.create_database(context.guild.id)
@@ -179,5 +180,5 @@ class ModuleAnalyze(commands.Cog):
 
             Path(f"reactions_{datetime.now().timestamp()}.json").write_text(
                 json.dumps(new_dict, indent=4, ensure_ascii=False), encoding="utf8")
-            print(f"Finished counting reactions!")
+            print(f"Finished counting reactions for '{context.guild.name}'!")
             await initial.reply("Finished counting reactions!")
