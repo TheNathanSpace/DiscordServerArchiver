@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from nextcord import Guild, TextChannel, Message
+from nextcord import Guild, TextChannel, Message, File
 from nextcord.ext import commands
 from nextcord.ext.commands import Context
 
@@ -64,124 +64,133 @@ class CogArchive(commands.Cog):
     async def archive(self, context: Context):
         logging.info(f"Started archiving messages from [{context.guild.name}]")
         latest = await context.message.reply("Archiving server!")
-        with context.typing():
-            guild: Guild = context.guild
-            text_channel_dict = {}
-            for channel in guild.text_channels:
-                text_channel_dict[channel.id] = None
-            for thread in guild.threads:
-                text_channel_dict[thread.id] = None
+        try:
+            with context.typing():
+                guild: Guild = context.guild
+                text_channel_dict = {}
+                for channel in guild.text_channels:
+                    text_channel_dict[channel.id] = None
+                for thread in guild.threads:
+                    text_channel_dict[thread.id] = None
 
-            self.create_database(context.guild.id)
-            connection = sqlite3.connect(f'database_{context.guild.id}.db')
-            cursor = connection.cursor()
-            channel_ids = cursor.execute('SELECT DISTINCT channel_id FROM messages;')
-            for channel_id in channel_ids:
-                channel_id = channel_id[0]
-                if channel_id in text_channel_dict:
-                    text_channel_dict[channel_id] = True
+                self.create_database(context.guild.id)
+                connection = sqlite3.connect(f'database_{context.guild.id}.db')
+                cursor = connection.cursor()
+                channel_ids = cursor.execute('SELECT DISTINCT channel_id FROM messages;')
+                for channel_id in channel_ids:
+                    channel_id = channel_id[0]
+                    if channel_id in text_channel_dict:
+                        text_channel_dict[channel_id] = True
 
-            for channel_id in text_channel_dict:
-                if text_channel_dict[channel_id] is not None:
-                    latest_message = cursor.execute(
-                        'SELECT message_id FROM messages WHERE channel_id = ? ORDER BY message_timestamp DESC;',
-                        (channel_id,)).fetchone()
-                    text_channel_dict[channel_id] = latest_message[0]
+                for channel_id in text_channel_dict:
+                    if text_channel_dict[channel_id] is not None:
+                        latest_message = cursor.execute(
+                            'SELECT message_id FROM messages WHERE channel_id = ? ORDER BY message_timestamp DESC;',
+                            (channel_id,)).fetchone()
+                        text_channel_dict[channel_id] = latest_message[0]
 
-            text_channel: TextChannel
-            for text_channel_id in text_channel_dict:
-                text_channel = guild.get_channel(text_channel_id) or guild.get_thread(text_channel_id)
-                if text_channel is None:
-                    logging.info(f"Error: Channel [{text_channel_id}] is null")
-                    continue
+                text_channel: TextChannel
+                for text_channel_id in text_channel_dict:
+                    text_channel = guild.get_channel(text_channel_id) or guild.get_thread(text_channel_id)
+                    if text_channel is None:
+                        logging.info(f"Error: Channel [{text_channel_id}] is null")
+                        continue
 
-                logging.info(f"On channel: [{text_channel.name}]")
-                latest = await latest.reply(f"On channel: [{text_channel.name}]")
+                    logging.info(f"On channel: [{text_channel.name}]")
+                    latest = await latest.reply(f"On channel: [{text_channel.name}]")
 
-                message_number = 0
+                    message_number = 0
 
-                after = None
-                if text_channel_dict[text_channel_id] is not None:
-                    message_id = text_channel_dict[text_channel_id]
+                    after = None
+                    if text_channel_dict[text_channel_id] is not None:
+                        message_id = text_channel_dict[text_channel_id]
+                        try:
+                            latest_message: Message = await text_channel.fetch_message(message_id)
+                            after = latest_message.created_at
+                            logging.info("Getting all messages after " + after.date().strftime("%B %d, %G"))
+                        except:
+                            logging.info(
+                                f"Error getting latest message in channel [{text_channel.name}]. The bot probably doesn't have access to it.")
                     try:
-                        latest_message: Message = await text_channel.fetch_message(message_id)
-                        after = latest_message.created_at
-                        logging.info("Getting all messages after " + after.date().strftime("%B %d, %G"))
+                        async for message in text_channel.history(limit=None, oldest_first=True, after=after):
+                            message_number += 1
+                            logging.info(f"On message #{message_number}", end="\r")
+                            saved_message = SavedMessage(message)
+                            while True:
+                                try:
+                                    await saved_message.get_reactions(message)
+                                    break
+                                except Exception as e:
+                                    logging.info(f"Error getting reactions; retrying: {e}")
+
+                            to_insert = (
+                                saved_message.message_id, saved_message.channel_id, saved_message.author_id,
+                                saved_message.message_timestamp, json.dumps(saved_message.attachment_url_list),
+                                saved_message.message_text, json.dumps(saved_message.reaction_dict)
+                            )
+                            cursor.execute(
+                                'INSERT INTO messages(message_id, channel_id, author_id, message_timestamp, attachment_url_list, message_text, reaction_list) VALUES(?,?,?,?,?,?,?) ON CONFLICT(message_id) DO NOTHING;',
+                                to_insert)
+
+                            connection.commit()
                     except:
                         logging.info(
-                            f"Error getting latest message in channel [{text_channel.name}]. The bot probably doesn't have access to it.")
-                try:
-                    async for message in text_channel.history(limit=None, oldest_first=True, after=after):
-                        message_number += 1
-                        logging.info(f"On message #{message_number}", end="\r")
-                        saved_message = SavedMessage(message)
-                        while True:
-                            try:
-                                await saved_message.get_reactions(message)
-                                break
-                            except Exception as e:
-                                logging.info(f"Error getting reactions; retrying: {e}")
+                            f"Error getting messages in channel [{text_channel.name}]. The bot probably doesn't have access to it.")
+                        latest = await latest.reply(
+                            f"Error getting messages in channel [{text_channel.name}]. The bot probably doesn't have access to it.")
 
-                        to_insert = (
-                            saved_message.message_id, saved_message.channel_id, saved_message.author_id,
-                            saved_message.message_timestamp, json.dumps(saved_message.attachment_url_list),
-                            saved_message.message_text, json.dumps(saved_message.reaction_dict)
-                        )
-                        cursor.execute(
-                            'INSERT INTO messages(message_id, channel_id, author_id, message_timestamp, attachment_url_list, message_text, reaction_list) VALUES(?,?,?,?,?,?,?) ON CONFLICT(message_id) DO NOTHING;',
-                            to_insert)
-
-                        connection.commit()
-                except:
-                    logging.info(
-                        f"Error getting messages in channel [{text_channel.name}]. The bot probably doesn't have access to it.")
-                    latest = await latest.reply(
-                        f"Error getting messages in channel [{text_channel.name}]. The bot probably doesn't have access to it.")
-
-            logging.info(f"Finished scraping messages from [{context.guild.name}]")
-            await latest.reply("Finished archiving server!")
+                logging.info(f"Finished scraping messages from [{context.guild.name}]")
+                await latest.reply("Finished archiving server!")
+        except Exception as e:
+            await latest.reply(f"A fatal exception occurred. Archival could not be completed. ({type(e).__name__})")
+            logging.error(e)
 
     @commands.command()
     async def count_reactions(self, context: Context):
         logging.info(f"Started counting reactions for [{context.guild.name}]")
         initial = await context.message.reply("Counting reactions!")
-        with context.typing():
-            self.create_database(context.guild.id)
-            connection = sqlite3.connect(f'database_{context.guild.id}.db')
-            cursor = connection.cursor()
-            all_rows = cursor.execute('SELECT reaction_list FROM messages WHERE reaction_list != ?;',
-                                      ("{}",)).fetchall()
-            user_reactions = {}
-            for row in all_rows:
-                reaction_dict = json.loads(row[0])
-                for user in reaction_dict:
-                    for reaction in reaction_dict[user]:  # reaction: {"name": "uptrump_old", "id": 730559664625811486}
-                        if user not in user_reactions:
-                            user_reactions[user] = {}
+        try:
+            with context.typing():
+                self.create_database(context.guild.id)
+                connection = sqlite3.connect(f'database_{context.guild.id}.db')
+                cursor = connection.cursor()
+                all_rows = cursor.execute('SELECT reaction_list FROM messages WHERE reaction_list != ?;',
+                                          ("{}",)).fetchall()
+                user_reactions = {}
+                for row in all_rows:
+                    reaction_dict = json.loads(row[0])
+                    for user in reaction_dict:
+                        for reaction in reaction_dict[user]:
+                            if user not in user_reactions:
+                                user_reactions[user] = {}
 
-                        reaction_name = None
-                        if type(reaction) is dict:
-                            reaction_name = reaction["name"]
-                        else:
-                            reaction_name = reaction
+                            reaction_name = None
+                            if type(reaction) is dict:
+                                reaction_name = reaction["name"]
+                            else:
+                                reaction_name = reaction
 
-                        if reaction_name not in user_reactions[user]:
-                            user_reactions[user][reaction_name] = 0
+                            if reaction_name not in user_reactions[user]:
+                                user_reactions[user][reaction_name] = 0
 
-                        user_reactions[user][reaction_name] += 1
+                            user_reactions[user][reaction_name] += 1
 
-            new_dict = {}
-            for user in user_reactions:
-                try:
-                    username = await context.guild.fetch_member(user)
-                except:
-                    username = "Unknown user"
+                new_dict = {}
+                for user in user_reactions:
+                    try:
+                        username = await context.guild.fetch_member(user)
+                    except:
+                        username = "Unknown user"
 
-                new_dict[f"{username} ({user})"] = dict(
-                    sorted(user_reactions[user].items(), key=lambda item: item[1], reverse=True))
+                    new_dict[f"{username} ({user})"] = dict(
+                        sorted(user_reactions[user].items(), key=lambda item: item[1], reverse=True))
 
-            file = Path(f"reactions_{datetime.now().timestamp()}.json")
-            file.write_text(
-                json.dumps(new_dict, indent=4, ensure_ascii=False), encoding="utf8")
-            logging.info(f"Finished counting reactions for [{context.guild.name}]")
-            await initial.reply("Finished counting reactions!", file=f"{file.as_posix()}")
+                file = Path(f"reactions_{datetime.now().timestamp()}.json")
+                file.write_text(
+                    json.dumps(new_dict, indent=4, ensure_ascii=False), encoding="utf8")
+                logging.info(f"Finished counting reactions for [{context.guild.name}]")
+                await initial.reply("Finished counting reactions!", file=File(fp=file))
+        except Exception as e:
+            await initial.reply(
+                f"A fatal exception occurred. Reaction counting could not be completed. ({type(e).__name__})")
+            logging.error(e)
