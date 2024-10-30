@@ -21,7 +21,7 @@ cd DiscordServerArchiver
 5. Install the Python dependencies:
 
 ```bash
-pip install requirements.txt
+pip install -r requirements.txt
 ```
 
 6. Define your bot's secret key in the variable `key` in the module `secrets`:
