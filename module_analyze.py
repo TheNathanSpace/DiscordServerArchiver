@@ -182,3 +182,4 @@ class ModuleAnalyze(commands.Cog):
                 json.dumps(new_dict, indent=4, ensure_ascii=False), encoding="utf8")
             print(f"Finished counting reactions for '{context.guild.name}'!")
             await initial.reply("Finished counting reactions!")
+        return
