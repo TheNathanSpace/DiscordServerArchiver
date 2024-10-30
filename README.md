@@ -8,7 +8,7 @@ This is a Discord bot that archives entire servers, storing every message in a S
 
 2. Add the bot to your server using the generated OAUTH2 URL. Since I'm hosting it myself and using it on my server I'd
    just give it Administrator permissions. Otherwise, my best guess is that it needs to view and manage messages. For example:
-   https://discord.com/oauth2/authorize?client_id=1016161382653247569&permissions=292058032192&integration_type=0&scope=bot
+   https://discord.com/oauth2/authorize?client_id=1016161382653247569&permissions=292057901056&integration_type=0&scope=bot
 
 4. Install Python: https://www.python.org/downloads/
 
