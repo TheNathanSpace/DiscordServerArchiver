@@ -90,7 +90,7 @@ class ModuleAnalyze(commands.Cog):
 
         text_channel: TextChannel
         for text_channel_id in text_channel_dict:
-            text_channel = guild.get_channel(text_channel_id)
+            text_channel = guild.get_channel(text_channel_id) or guild.get_thread(text_channel_id)
             if text_channel is None:
                 print(f"Error: Channel {text_channel_id} is null")
                 continue
