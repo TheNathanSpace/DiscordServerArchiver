@@ -22,7 +22,7 @@ client = nextcord.Client()
 
 @bot.event
 async def on_ready():
-    logging.info('Logged in as', bot.user.name, "(" + str(bot.user.id) + ")")
+    logging.info(f"Logged in as {bot.user.name} ({bot.user.id})")
 
 
 bot.add_cog(CogArchive(bot))
