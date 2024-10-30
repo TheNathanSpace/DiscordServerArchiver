@@ -101,11 +101,15 @@ class ModuleAnalyze(commands.Cog):
 
             after = None
             if text_channel_dict[text_channel_id] is not None:
-                message_id = text_channel_dict[text_channel_id]
-                print(f"Message ID: {message_id}")
-                latest_message: Message = await text_channel.fetch_message(message_id)
-                after = latest_message.created_at
-                print("Getting all messages after " + after.date().strftime("%B %d, %G"))
+                try:
+                    latest_message: Message = await text_channel.fetch_message(message_id)
+                              message_id = text_channel_dict[text_channel_id]
+                    print(f"Message ID: {message_id}")
+                    after = latest_message.created_at
+                    print("Getting all messages after " + after.date().strftime("%B %d, %G"))
+              except:
+                    print(
+                        f"Error getting latest message in channel {text_channel.name}. The bot probably doesn't have access to it.")
             try:
                 async for message in text_channel.history(limit=None, oldest_first=True, after=after):
                     message_number += 1
