@@ -54,7 +54,8 @@ class CogArchive(commands.Cog):
         self.latest_sender = None
 
     def create_database(self, guild_id):
-        connection = sqlite3.connect(f'database_{guild_id}.db')
+        Path("database/").mkdir(exist_ok=True)
+        connection = sqlite3.connect(f'database/database_{guild_id}.db')
         cursor = connection.cursor()
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS messages(message_id integer PRIMARY KEY, channel_id integer, author_id integer, message_timestamp float, attachment_url_list text, message_text text, reaction_list text);')
@@ -74,7 +75,7 @@ class CogArchive(commands.Cog):
                     text_channel_dict[thread.id] = None
 
                 self.create_database(context.guild.id)
-                connection = sqlite3.connect(f'database_{context.guild.id}.db')
+                connection = sqlite3.connect(f'database/database_{context.guild.id}.db')
                 cursor = connection.cursor()
                 channel_ids = cursor.execute('SELECT DISTINCT channel_id FROM messages;')
                 for channel_id in channel_ids:
@@ -152,7 +153,7 @@ class CogArchive(commands.Cog):
         try:
             with context.typing():
                 self.create_database(context.guild.id)
-                connection = sqlite3.connect(f'database_{context.guild.id}.db')
+                connection = sqlite3.connect(f'database/database_{context.guild.id}.db')
                 cursor = connection.cursor()
                 all_rows = cursor.execute('SELECT reaction_list FROM messages WHERE reaction_list != ?;',
                                           ("{}",)).fetchall()
@@ -185,7 +186,8 @@ class CogArchive(commands.Cog):
                     new_dict[f"{username} ({user})"] = dict(
                         sorted(user_reactions[user].items(), key=lambda item: item[1], reverse=True))
 
-                file = Path(f"reactions_{datetime.now().timestamp()}.json")
+                Path("reactions/").mkdir(exist_ok=True)
+                file = Path(f"reactions/reactions_{datetime.now().timestamp()}.json")
                 file.write_text(
                     json.dumps(new_dict, indent=4, ensure_ascii=False), encoding="utf8")
                 logging.info(f"Finished counting reactions for [{context.guild.name}]")
