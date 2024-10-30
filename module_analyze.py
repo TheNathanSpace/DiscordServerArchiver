@@ -107,7 +107,7 @@ class ModuleAnalyze(commands.Cog):
                     print(f"Message ID: {message_id}")
                     after = latest_message.created_at
                     print("Getting all messages after " + after.date().strftime("%B %d, %G"))
-              except:
+                except:
                     print(
                         f"Error getting latest message in channel {text_channel.name}. The bot probably doesn't have access to it.")
             try:
